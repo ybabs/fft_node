@@ -13,22 +13,14 @@
 
 #define SERIAL_LENGTH 2052
 #define FLOAT_SIZE 1024
-
 using namespace std;
 
+
 std::vector<unsigned char> data_vector;
-float converted_values[512];
-//unsigned char data[2053];
-//std_msgs::Float32MultiArray converted_values;
-
+std_msgs::Float32MultiArray converted_values;
 serial_processing::fft msg;
-unsigned char temp_buffer[4];
-int len ;
 serial::Serial ser;
-
-
-
-float fft_vals[1023];
+const float FFT_RESOLUTION = 292.2695;
 void write_callback(const serial_processing::fft::ConstPtr& array);
 
 void write_callback(const serial_processing::fft::ConstPtr& array)
@@ -53,8 +45,8 @@ int main(int argc, char** argv)
     
     ros::NodeHandle nh;
 
-    ros::Publisher read_pub = nh.advertise<serial_processing::fft>("FFT", 1024);
-    ros::Subscriber array_sub = nh.subscribe("FFT", 1024, write_callback); 
+    ros::Publisher read_pub = nh.advertise<serial_processing::fft>("FFT", 512);
+    ros::Subscriber array_sub = nh.subscribe("FFT", 512, write_callback); 
 
     try
     {
@@ -116,65 +108,32 @@ int main(int argc, char** argv)
                 {
                     
                     std::vector<unsigned char>bytes(stop_string.begin(), stop_string.end());
-                    
-                    // for(std::vector<unsigned char>::const_iterator i = bytes.begin(); i != bytes.end(); ++i)
-                    // {
-                    //     std::cout << *i <<endl;
-                    // }
-
-                    // unsigned char* byte = &(bytes[0]);
-                    // vector<float>floatValue;
-
-                    //std::cout << bytes.size() << std::endl;
-                     
-                    
+                                                        
                     float float_values[513];
-                    //unsigned char temp_buffer[4];
-
-
-                     memcpy(&float_values[0], &bytes[0], bytes.size());
+                    
+                    memcpy(&float_values[0], &bytes[0], bytes.size());
 
                     std::vector<float>float_vector{std::begin(float_values), std::end(float_values)};
-                    // float float_values[513] = { 0 };
-                    // int j = 0;
-                    // for(size_t i = 4; i < 2052; i+=4)
-                    // {
-
-                    //     temp_buffer[0] = bytes[i - 4];
-                    //     temp_buffer[1] = bytes[i - 3];
-                    //     temp_buffer[2] = bytes[i - 2];
-                    //     temp_buffer[3] = bytes[i - 1];
-
-                    //     memcpy(&float_values[j], temp_buffer, sizeof(float));
-                    //     //memcpy(float_values[j], temp_buffer, sizeof(float));
-
-                    //     //float_values.insert(float_values.end(), &temp_buffer[0], &temp_buffer[4]);
-
-                    //     j++;
-                    // remove last element from the vector
+                    
+                    // remove last element from the vector (STOP)
                     float_vector.erase(float_vector.end()-1);
                         
-                    std::cout << float_vector.size() << std::endl;
+                    //std::cout << float_vector.size() << std::endl;
+               
+                   msg.header.stamp = ros::Time::now();
 
+                   for(std::vector<float>::iterator i = float_vector.begin(); i != float_vector.end(); ++i)
+                   {
+                       msg.fftAmplitude.data.push_back(*i);
+                   }
 
-                    // }
-
-
-                    
-                    for(int i = 60; i < 70; i++)
-                    {
-                    
-                         std::cout << i << "---------" << float_vector[i] << endl;
-                         
-                    }
-
-                     std::cout << "EN--------D" << endl;
-
-
-
-                   
-                
-                    //float_values.clear();
+                    read_pub.publish(msg);
+                    int max_index = max_element(msg.fftAmplitude.data.begin(), msg.fftAmplitude.data.end())- msg.fftAmplitude.data.begin();
+                    float max = *max_element(msg.fftAmplitude.data.begin(), msg.fftAmplitude.data.end());
+                    float frequency = (max_index * FFT_RESOLUTION)/1000;
+                    ROS_INFO("%f kHz Frequency at Index %d with amplitude %f", frequency , max_index, max);
+                    float_vector.clear();
+                    msg.fftAmplitude.data.clear();
                 }
 
              }
@@ -183,12 +142,7 @@ int main(int argc, char** argv)
              {
                  ROS_WARN("Junk ByteStream");
                  ser.flushInput();
-             }
-
-            
-             
-
-              
+             }        
                       
                 
 
