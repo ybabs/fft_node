@@ -12,8 +12,10 @@ find_package(catkin REQUIRED COMPONENTS
   serial
   std_msgs
   message_generation
+  cv_bridge
 )
 
+find_package( OpenCV REQUIRED )
 
 add_message_files(
   FILES
@@ -30,6 +32,7 @@ catkin_package(
     serial
     std_msgs
     message_runtime
+    cv_bridge
 )
 
 include_directories(
@@ -42,4 +45,5 @@ add_dependencies(serial_processing_node serial_processing_generate_messages_cpp)
 
 target_link_libraries(serial_processing_node
   ${catkin_LIBRARIES}
+   ${OpenCV_LIBRARIES}
 )

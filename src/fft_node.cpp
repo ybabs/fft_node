@@ -10,6 +10,9 @@
 #include "serial_processing/fft.h"
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/foreach.hpp>
+#include "cv_bridge/cv_bridge.h"
+#include "sensor_msgs/Image.h"
+#include "sensor_msgs/ChannelFloat32.h"
 
 #define SERIAL_LENGTH 2052
 #define FLOAT_SIZE 1024
@@ -126,6 +129,8 @@ int main(int argc, char** argv)
                    {
                        msg.fftAmplitude.data.push_back(*i);
                    }
+
+                   // ADD GPS Timestamped Messages here.....
 
                     read_pub.publish(msg);
                     int max_index = max_element(msg.fftAmplitude.data.begin(), msg.fftAmplitude.data.end())- msg.fftAmplitude.data.begin();
