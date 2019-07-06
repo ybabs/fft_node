@@ -11,8 +11,11 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/foreach.hpp>
 #include "cv_bridge/cv_bridge.h"
+#include <opencv2/opencv.hpp>
 #include "sensor_msgs/Image.h"
 #include "sensor_msgs/ChannelFloat32.h"
+#include <image_transport/image_transport.h>
+
 
 #define SERIAL_LENGTH 2052
 #define FLOAT_SIZE 1024
@@ -25,6 +28,9 @@ serial_processing::fft msg;
 serial::Serial ser;
 const float FFT_RESOLUTION = 292.2695;
 void write_callback(const serial_processing::fft::ConstPtr& array);
+ image_transport::Publisher image_pub_;
+ cv::Mat graph;
+
 
 void write_callback(const serial_processing::fft::ConstPtr& array)
 {
@@ -41,6 +47,44 @@ void write_callback(const serial_processing::fft::ConstPtr& array)
     // return;
 }
 
+template <typename T>
+cv::Mat plotGraph(std::vector<T>& vals, int YRange[2])
+{
+
+    auto it = minmax_element(vals.begin(), vals.end());
+    float scale = 1./ceil(*it.second - *it.first); 
+    float bias = *it.first;
+    int rows = YRange[1] - YRange[0] + 1;
+    cv::Mat image = cv::Mat::zeros( rows, vals.size(), CV_8UC3 );
+    image.setTo(0);
+    for (int i = 0; i < (int)vals.size()-1; i++)
+    {
+        cv::line(image, cv::Point(i, rows - 1 - (vals[i] - bias)*scale*YRange[1]), cv::Point(i+1, rows - 1 - (vals[i+1] - bias)*scale*YRange[1]), cv::Scalar(255, 0, 0), 1);
+    }
+
+    // cv::namedWindow("image", CV_WINDOW_NORMAL);
+    // cv::resizeWindow("image", 1024,1024);
+    // cv::imshow("image", image);   
+    // //cv::waitKey();   
+    // cv::destroyWindow("image"); 
+
+ 
+    cv_bridge::CvImagePtr cv_ptr(new cv_bridge::CvImage);
+
+    cv_ptr->image = image;
+    image_pub_.publish(cv_ptr->toImageMsg());
+
+    ROS_INFO("Image published");
+    return image;
+}
+
+void imageCallback(const sensor_msgs::ImageConstPtr& msg)
+{
+  graph = cv_bridge::toCvShare(msg, "bgr8")->image;
+  cv::imshow( "image", graph );
+  cv::waitKey(30);
+}
+
 
 int main(int argc, char** argv)
 {
@@ -49,7 +93,12 @@ int main(int argc, char** argv)
     ros::NodeHandle nh;
 
     ros::Publisher read_pub = nh.advertise<serial_processing::fft>("FFT", 512);
+    image_transport::ImageTransport it_(nh);
+    image_pub_ = it_.advertise("/traj_output", 1);
     ros::Subscriber array_sub = nh.subscribe("FFT", 512, write_callback); 
+
+     ros::Subscriber sub = nh.subscribe("/traj_output", 1000, imageCallback);
+   
 
     try
     {
@@ -132,6 +181,13 @@ int main(int argc, char** argv)
 
                    // ADD GPS Timestamped Messages here.....
 
+
+                   // Show graph here..
+                   int range[2] = {0, float_vector.size()};
+                   graph = plotGraph(float_vector, range);
+                   //cv::imshow( "image", graph );
+
+
                     read_pub.publish(msg);
                     int max_index = max_element(msg.fftAmplitude.data.begin(), msg.fftAmplitude.data.end())- msg.fftAmplitude.data.begin();
                     float max = *max_element(msg.fftAmplitude.data.begin(), msg.fftAmplitude.data.end());
@@ -156,4 +212,4 @@ int main(int argc, char** argv)
         loop_rate.sleep();
     }
     
-}
+};

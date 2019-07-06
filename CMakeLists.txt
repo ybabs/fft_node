@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   message_generation
   cv_bridge
+  image_transport
 )
 
 find_package( OpenCV REQUIRED )
