@@ -9,7 +9,9 @@
                 "~/catkin_ws/devel/include",
                 "/opt/ros/melodic/include",
                 "/usr/include",
-                "~/cvplot/include"
+                "~/serial/include",
+                "~/catkin_ws/src/fft_node",
+                "${workspaceFolder}/include"
             ],
             "name": "Linux",
             "intelliSenseMode": "gcc-x64"
