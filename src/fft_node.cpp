@@ -1,4 +1,8 @@
 #include "fft_process/fft_node.h"
+#include <fstream>
+
+ ros::Time curr;
+ ros::Time prev;
 
 STM32Process::STM32Process()
 {
@@ -18,6 +22,7 @@ cv::Mat STM32Process::plotFFTPoints(std::vector<T>& vals, int y_range[2])
     float bias = *it.first;
     int rows = y_range[1] - y_range[0] + 1;       // number of elements
 
+
     cv::Mat fft_plot = cv::Mat::zeros(rows, vals.size(), CV_8UC3);
 
     fft_plot.setTo(0);
@@ -32,9 +37,10 @@ cv::Mat STM32Process::plotFFTPoints(std::vector<T>& vals, int y_range[2])
 
     cv_bridge::CvImagePtr cv_ptr(new cv_bridge::CvImage);
     cv_ptr->image = fft_plot;
+    cv_ptr->encoding = sensor_msgs::image_encodings::BGR8;
     image_pub.publish(cv_ptr->toImageMsg());
 
-    ROS_INFO("Image published");
+    //ROS_INFO("Image published");
     return fft_plot;  // No need for this bruh...
 
 }
@@ -66,15 +72,17 @@ void STM32Process::processSerialData()
         ROS_ERROR_STREAM("An error occured");
     }
 
-     ros::Rate loop_rate(50);
+     ros::Rate loop_rate(20);
 
     while(ros::ok())
     {
-         ros::spinOnce();
+         //ros::spinOnce();
 
          if(ser.available())
          {
-             size_t data_available = ser.available();
+              size_t data_available = ser.available();
+            // int data_available = ser.available();
+            // ROS_INFO("data %d", data_available );
 
              if(data_available > 2052)
              {
@@ -83,17 +91,23 @@ void STM32Process::processSerialData()
              }
 
              std::string delimiter_string;
-             ser.readline(delimiter_string, 2052, "stop");
+            // ser.readline(delimiter_string, 2060, "stop");
+            curr = ros::Time::now();
+            ser.readline(delimiter_string, 2052, "stop");
+            ros::Duration time = curr - prev;
+             prev = curr;
 
              // check what the string ends with
              if(boost::algorithm::ends_with(delimiter_string, "stop"))
              {
                  unsigned int num = 0;
 
-                 if(delimiter_string.length() == 2052)
+                 if(delimiter_string.length() == 2052) //2060
                  {
+                      
                      std::vector<unsigned char>uart_bytes(delimiter_string.begin(), delimiter_string.end());
 
+                     //float uart_float_values[515];
                      float uart_float_values[513];
 
                      memcpy(&uart_float_values[0], &uart_bytes[0], uart_bytes.size());
@@ -102,6 +116,11 @@ void STM32Process::processSerialData()
 
                     // remove last element from the vector (STOP)
                     float_vector.erase(float_vector.end()-1);
+                    //sequence_number =  float_vector[0];
+                   // process_time = float_vector[1];
+
+                    //remove first two elements from the vector 
+                   // float_vector.erase(float_vector.begin(), float_vector.begin()+1);
 
                     msg.header.stamp = ros::Time::now();
 
@@ -110,9 +129,21 @@ void STM32Process::processSerialData()
                         msg.fftAmplitude.data.push_back(*i);
                     }
 
+                    
+
+                     double dt = time.toSec();
+                    // std::ofstream myfile("file.csv");
+                    // for(const auto &e: msg.fftAmplitude.data)
+                    // {
+                    //     myfile << e << "\n";
+
+                    // }
+
+
                      // ADD GPS Timestamped Messages here.....
 
                      // Show graph here..
+                     ROS_INFO("Dt %f", dt);
                    int range[2] = {0, (int)float_vector.size()};
                    graph = plotFFTPoints(float_vector, range);  // change plot_graph to a void()
                    //cv::imshow( "image", graph );
@@ -126,6 +157,7 @@ void STM32Process::processSerialData()
                     float max = *max_element(msg.fftAmplitude.data.begin(), msg.fftAmplitude.data.end());
                     // return frequency
                     float frequency = (max_index * FFT_RESOLUTION)/1000;
+                    // ROS_INFO("Packet Number: %d, Process time %d us, %f kHz Frequency at Index %d with amplitude %f", frequency , max_index, max);
                     ROS_INFO("%f kHz Frequency at Index %d with amplitude %f", frequency , max_index, max);
 
                     float_vector.clear();
@@ -137,9 +169,12 @@ void STM32Process::processSerialData()
              {
                  ROS_WARN("Junk ByteStream");
                  ser.flushInput();
+                // ROS_INFO("Size: %d", data_available);
              }             
 
          }
+
+         ros::spinOnce();
 
          loop_rate.sleep();
      }

@@ -1,0 +1,6 @@
+devel_space: /home/waffle/catkin_ws/src/fft_node/devel
+install: false
+install_space: /home/waffle/catkin_ws/src/fft_node/install
+profile: default
+source_space: /home/waffle/catkin_ws/src/fft_node/src
+workspace: /home/waffle/catkin_ws/src/fft_node

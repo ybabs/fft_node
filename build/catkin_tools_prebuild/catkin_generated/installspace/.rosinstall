@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/waffle/catkin_ws/src/fft_node/install/setup.sh

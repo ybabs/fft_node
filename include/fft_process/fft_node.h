@@ -18,11 +18,12 @@
 #include "sensor_msgs/ChannelFloat32.h"
 #include <image_transport/image_transport.h>
 
-#define SERIAL_LENGTH 2052
+#define SERIAL_LENGTH 2060
 #define FLOAT_SIZE 1024
 #define FFT_SIZE 512
 
-const float FFT_RESOLUTION = 292.2695;
+//const float FFT_RESOLUTION = 292.2695;  
+const float FFT_RESOLUTION = 500000/1024; // Sampling frequency / fft length  
 
 
 class STM32Process
@@ -47,6 +48,8 @@ class STM32Process
         ros::NodeHandle nh;
         //image_transport::ImageTransport transport;
         cv::Mat graph;
+        int process_time;
+        int sequence_number;
 
 
 };
