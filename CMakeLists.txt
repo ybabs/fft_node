@@ -41,7 +41,8 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-add_executable(serial_processing_node src/fft_node.cpp)
+add_executable(serial_processing_node src/fft_node.cpp
+                                      src/node_instance.cpp)
 
 add_dependencies(serial_processing_node serial_processing_generate_messages_cpp)
 

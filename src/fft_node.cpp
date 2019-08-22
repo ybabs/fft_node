@@ -1,37 +1,46 @@
-#include "fft_process/fft_node.h"
+#include "fft_process/fft_node.hpp"
 #include <fstream>
 
- ros::Time curr;
- ros::Time prev;
+STM32Process::STM32Process(const ros::NodeHandle &node_handle, 
+        const ros::NodeHandle &private_node_handle):
+        nh(node_handle),
+        pnh(private_node_handle),
+        plot_vals(0),
+        y_range{}
 
-STM32Process::STM32Process()
 {
-    fft_points_pub = nh.advertise<serial_processing::fft>("FFT", FFT_SIZE);
-    image_transport::ImageTransport transport(nh);
+        this->init();
+}
+
+
+void STM32Process::init()
+{
+    fft_points_pub = pnh.advertise<serial_processing::fft>("FFT", FFT_SIZE);
+    image_transport::ImageTransport transport(pnh);
     image_pub = transport.advertise("/fft_plot", 1);
+
+    periodic_timer = pnh.createTimer(ros::Duration(0.01), &STM32Process::imageCallback, this);
 
     processSerialData();
 
 }
 
-template <typename T>
-cv::Mat STM32Process::plotFFTPoints(std::vector<T>& vals, int y_range[2])
+
+void STM32Process::imageCallback(const ros::TimerEvent &event)
 {
-    auto it = std::minmax_element(vals.begin(), vals.end()); // find the min and max element in the vector
+    auto it = std::minmax_element(plot_vals.begin(), plot_vals.end()); // find the min and max element in the vector
     float scale = 1./ceil(*it.second - *it.first);
     float bias = *it.first;
     int rows = y_range[1] - y_range[0] + 1;       // number of elements
 
-
-    cv::Mat fft_plot = cv::Mat::zeros(rows, vals.size(), CV_8UC3);
-
+    cv::Mat fft_plot = cv::Mat::zeros(rows, plot_vals.size(), CV_8UC3);
     fft_plot.setTo(0);
 
     // draw line
-    for(int i = 0; i < (int)vals.size()- 1; i++ )
+    for(int i = 0; i < (int)plot_vals.size()- 1; i++ )
     {
-        cv::line(fft_plot, cv::Point(i, rows - 1 - (vals[i] - bias)*scale*y_range[1]), 
-                           cv::Point(i+1, rows - 1 - (vals[i+1] - bias)*scale*y_range[1]), 
+        cv::line(fft_plot, cv::Point(i, rows - 1 - (plot_vals[i] - bias)*scale*y_range[1]), 
+                           cv::Point(i+1, rows - 1 - (plot_vals[i+1] - bias)*scale*y_range[1]), 
                            cv::Scalar(255, 0, 0), 1);
     }
 
@@ -39,9 +48,6 @@ cv::Mat STM32Process::plotFFTPoints(std::vector<T>& vals, int y_range[2])
     cv_ptr->image = fft_plot;
     cv_ptr->encoding = sensor_msgs::image_encodings::BGR8;
     image_pub.publish(cv_ptr->toImageMsg());
-
-    //ROS_INFO("Image published");
-    return fft_plot;  // No need for this bruh...
 
 }
 
@@ -70,13 +76,7 @@ void STM32Process::processSerialData()
     else
     {
         ROS_ERROR_STREAM("An error occured");
-    }
-
-     ros::Rate loop_rate(20);
-
-    while(ros::ok())
-    {
-         //ros::spinOnce();
+    }  
 
          if(ser.available())
          {
@@ -92,10 +92,10 @@ void STM32Process::processSerialData()
 
              std::string delimiter_string;
             // ser.readline(delimiter_string, 2060, "stop");
-            curr = ros::Time::now();
+            //curr = ros::Time::now();
             ser.readline(delimiter_string, 2052, "stop");
-            ros::Duration time = curr - prev;
-             prev = curr;
+            //ros::Duration time = curr - prev;
+            // prev = curr;
 
              // check what the string ends with
              if(boost::algorithm::ends_with(delimiter_string, "stop"))
@@ -129,25 +129,9 @@ void STM32Process::processSerialData()
                         msg.fftAmplitude.data.push_back(*i);
                     }
 
-                    
-
-                     double dt = time.toSec();
-                    // std::ofstream myfile("file.csv");
-                    // for(const auto &e: msg.fftAmplitude.data)
-                    // {
-                    //     myfile << e << "\n";
-
-                    // }
-
-
-                     // ADD GPS Timestamped Messages here.....
-
-                     // Show graph here..
-                     ROS_INFO("Dt %f", dt);
-                   int range[2] = {0, (int)float_vector.size()};
-                   graph = plotFFTPoints(float_vector, range);  // change plot_graph to a void()
-                   //cv::imshow( "image", graph );
-
+                    y_range[0] = 0;
+                    y_range[1] =  (int)float_vector.size();
+                    plot_vals =float_vector ; // change plot_graph to a void()
 
                     // publish FFT Messages
                     fft_points_pub.publish(msg);
@@ -169,28 +153,10 @@ void STM32Process::processSerialData()
              {
                  ROS_WARN("Junk ByteStream");
                  ser.flushInput();
-                // ROS_INFO("Size: %d", data_available);
              }             
 
          }
 
-         ros::spinOnce();
-
-         loop_rate.sleep();
-     }
-
 }
 
 
-int main(int argc, char** argv)
-{
-    ros::init(argc, argv, "fft_proc");
-
-    STM32Process process;
-
-    ros::spin();
-
-    return 0;
-    
-   
-}
