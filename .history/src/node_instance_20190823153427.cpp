@@ -13,7 +13,7 @@ int main(int argc, char** argv)
 
     STM32Process process(nh);
 
-    //ros::Rate loop_rate(1000);
+    ros::Rate loop_rate(1000);
 
     //while(ros::ok())
    // {
@@ -22,7 +22,7 @@ int main(int argc, char** argv)
         //     loop_rate.sleep();
    // }
 
-    ROS_INFO_STREAM("Running Thread in async multi-threaded mode" << boost::this_thread::get_id());
+   // ROS_INFO_STREAM("Running Thread in async multi-threaded mode" << boost::this_thread::get_id());
 
    
 
@@ -30,7 +30,7 @@ int main(int argc, char** argv)
 
     ros::waitForShutdown();
 
-    //return 0;
+    return 0;
     
    
 }

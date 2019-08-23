@@ -51,7 +51,14 @@
         "typeinfo": "cpp",
         "utility": "cpp",
         "algorithm": "cpp",
-        "string_view": "cpp"
+        "string_view": "cpp",
+        "complex": "cpp",
+        "unordered_set": "cpp",
+        "hash_map": "cpp",
+        "hash_set": "cpp",
+        "new": "cpp",
+        "numeric": "cpp",
+        "cfenv": "cpp"
     },
     "ros.distro": "melodic"
 }

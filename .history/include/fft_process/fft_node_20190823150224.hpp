@@ -32,13 +32,16 @@ class STM32Process
         void init();
         void processSerialData();
         std::vector<float> getPlotData();
-        int* getYRange();
+        int[] getYRange();
 
     private:
 
         // public node handle
         ros::NodeHandle nh;
-       
+        // private node handle
+        ros::NodeHandle pnh;
+
+
 
         std::vector<unsigned char> data_vector;
         std_msgs::Float32MultiArray converted_values;

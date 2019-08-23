@@ -1,34 +1,25 @@
 #include "fft_process/fft_node.hpp"
 #include <fstream>
-#include <boost/thread.hpp>
 
-STM32Process::STM32Process(const ros::NodeHandle &node_handle):
+STM32Process::STM32Process(const ros::NodeHandle &node_handle, 
+        const ros::NodeHandle &private_node_handle):
         nh(node_handle),
+        pnh(private_node_handle),
         plot_vals(0),
         y_range{}
 
 {
-    thread_ = std::thread(
-        [this]()
-        {
-
-            init();
-
-            for(;;)
-            {
-                //ROS_INFO_STREAM ("Running class in Thread: " << boost::this_thread::get_id());
-                processSerialData();
-            }
-
-        }
-    );
-        
+        this->init();
 }
 
 
 void STM32Process::init()
 {
-    fft_points_pub = nh.advertise<serial_processing::fft>("FFT", 1); 
+    fft_points_pub = pnh.advertise<serial_processing::fft>("FFT", FFT_SIZE);
+    image_transport::ImageTransport transport(pnh);
+    image_pub = transport.advertise("/fft_plot", 1);
+
+    periodic_timer = pnh.createTimer(ros::Duration(0.01), &STM32Process::imageCallback, this);
 
     try
     {
@@ -52,39 +43,49 @@ void STM32Process::init()
         ROS_ERROR_STREAM("An error occured");
     } 
 
-   
+   while(ser.available())
+   {
+       processSerialData();
+
+   } 
 }
 
-  std::vector<float> STM32Process::getPlotData()
-  {
-      return plot_vals;
-  }
 
-  int* STM32Process::getYRange()
-  {
-      return y_range;
-  }
+void STM32Process::imageCallback(const ros::TimerEvent &event)
+{
+    // auto it = std::minmax_element(plot_vals.begin(), plot_vals.end()); // find the min and max element in the vector
+    // float scale = 1./ceil(*it.second - *it.first);
+    // float bias = *it.first;
+    // int rows = y_range[1] - y_range[0] + 1;       // number of elements
 
-// void STM32Process::processSerialData()
-// {
-//      msg.header.stamp = ros::Time::now();
+    // cv::Mat fft_plot = cv::Mat::zeros(rows, plot_vals.size(), CV_8UC3);
+    // fft_plot.setTo(0);
 
-//      ros::Rate loop_rate(30000);
+    // // draw line
+    // for(int i = 0; i < (int)plot_vals.size()- 1; i++ )
+    // {
+    //     cv::line(fft_plot, cv::Point(i, rows - 1 - (plot_vals[i] - bias)*scale*y_range[1]), 
+    //                        cv::Point(i+1, rows - 1 - (plot_vals[i+1] - bias)*scale*y_range[1]), 
+    //                        cv::Scalar(255, 0, 0), 1);
+    // }
 
-//     // publish FFT Messages
-//     fft_points_pub.publish(msg);
+    // cv_bridge::CvImagePtr cv_ptr(new cv_bridge::CvImage);
+    // cv_ptr->image = fft_plot;
+    // cv_ptr->encoding = sensor_msgs::image_encodings::BGR8;
+    // image_pub.publish(cv_ptr->toImageMsg());
 
-//      loop_rate.sleep();
-// }
+   // processSerialData();
 
+}
 
 void STM32Process::processSerialData()
 {
 
     float result;
     int j = 0;
-   
-    if(ser.available())
+ 
+
+         if(ser.available())
          {
               size_t data_available = ser.available();
             // int data_available = ser.available();
@@ -148,7 +149,7 @@ void STM32Process::processSerialData()
                     // return frequency
                     float frequency = (max_index * FFT_RESOLUTION)/1000;
                     // ROS_INFO("Packet Number: %d, Process time %d us, %f kHz Frequency at Index %d with amplitude %f", frequency , max_index, max);
-                    //ROS_INFO("%f kHz Frequency at Index %d with amplitude %f", frequency , max_index, max);
+                    ROS_INFO("%f kHz Frequency at Index %d with amplitude %f", frequency , max_index, max);
 
                     float_vector.clear();
                     msg.fftAmplitude.data.clear();

@@ -38,7 +38,10 @@ class STM32Process
 
         // public node handle
         ros::NodeHandle nh;
-       
+        // private node handle
+        ros::NodeHandle pnh;
+
+
 
         std::vector<unsigned char> data_vector;
         std_msgs::Float32MultiArray converted_values;

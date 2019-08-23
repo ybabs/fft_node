@@ -16,7 +16,7 @@ STM32Process::STM32Process(const ros::NodeHandle &node_handle):
 
             for(;;)
             {
-                //ROS_INFO_STREAM ("Running class in Thread: " << boost::this_thread::get_id());
+                ROS_INFO_STREAM ("Running class in Thread: " << thread_.get_id());
                 processSerialData();
             }
 
@@ -28,7 +28,7 @@ STM32Process::STM32Process(const ros::NodeHandle &node_handle):
 
 void STM32Process::init()
 {
-    fft_points_pub = nh.advertise<serial_processing::fft>("FFT", 1); 
+    fft_points_pub = pnh.advertise<serial_processing::fft>("FFT", 1); 
 
     try
     {
@@ -64,18 +64,6 @@ void STM32Process::init()
   {
       return y_range;
   }
-
-// void STM32Process::processSerialData()
-// {
-//      msg.header.stamp = ros::Time::now();
-
-//      ros::Rate loop_rate(30000);
-
-//     // publish FFT Messages
-//     fft_points_pub.publish(msg);
-
-//      loop_rate.sleep();
-// }
 
 
 void STM32Process::processSerialData()
@@ -148,7 +136,7 @@ void STM32Process::processSerialData()
                     // return frequency
                     float frequency = (max_index * FFT_RESOLUTION)/1000;
                     // ROS_INFO("Packet Number: %d, Process time %d us, %f kHz Frequency at Index %d with amplitude %f", frequency , max_index, max);
-                    //ROS_INFO("%f kHz Frequency at Index %d with amplitude %f", frequency , max_index, max);
+                    ROS_INFO("%f kHz Frequency at Index %d with amplitude %f", frequency , max_index, max);
 
                     float_vector.clear();
                     msg.fftAmplitude.data.clear();

@@ -148,7 +148,7 @@ void STM32Process::processSerialData()
                     // return frequency
                     float frequency = (max_index * FFT_RESOLUTION)/1000;
                     // ROS_INFO("Packet Number: %d, Process time %d us, %f kHz Frequency at Index %d with amplitude %f", frequency , max_index, max);
-                    //ROS_INFO("%f kHz Frequency at Index %d with amplitude %f", frequency , max_index, max);
+                    ROS_INFO("%f kHz Frequency at Index %d with amplitude %f", frequency , max_index, max);
 
                     float_vector.clear();
                     msg.fftAmplitude.data.clear();
