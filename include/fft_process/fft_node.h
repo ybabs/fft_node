@@ -17,13 +17,17 @@
 #include "sensor_msgs/Image.h"
 #include "sensor_msgs/ChannelFloat32.h"
 #include <image_transport/image_transport.h>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
 
-#define SERIAL_LENGTH 2060
+
+#define SERIAL_LENGTH 2052
 #define FLOAT_SIZE 1024
 #define FFT_SIZE 512
 
 //const float FFT_RESOLUTION = 292.2695;  
-const float FFT_RESOLUTION = 500000/1024; // Sampling frequency / fft length  
+const float FFT_RESOLUTION = 400000/1024; // Sampling frequency / fft length  
 
 
 class STM32Process
@@ -36,6 +40,11 @@ class STM32Process
         void imageCallback(const sensor_msgs::ImageConstPtr& msg);
         void processSerialData();
         void publishFFTplot();
+        void writeStartData();
+        void writeStopData();
+        void setupPort();
+        void sendCommand();
+        bool isFFTReady();
 
 
     private:
@@ -46,10 +55,15 @@ class STM32Process
         image_transport::Publisher image_pub;
         ros::Publisher fft_points_pub;
         ros::NodeHandle nh;
-        //image_transport::ImageTransport transport;
-        cv::Mat graph;
-        int process_time;
-        int sequence_number;
+        cv::Mat imagePlot;
+        ros::Time currTime;
+        ros::Time prevTime;
+        uint8_t start_data[1];
+        uint8_t stop_data[1];
+        bool fftComputeFlag;
+        std::mutex mu;
+        std::condition_variable flag_cond;
+
 
 
 };

@@ -23,6 +23,11 @@ add_message_files(
   fft.msg
 )
 
+#add_service_files(
+ # FILES
+  #DaqCommand.srv
+#)
+
 generate_messages(
   DEPENDENCIES
   std_msgs

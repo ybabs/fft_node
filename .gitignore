@@ -1,4 +1,6 @@
-.vscode/*
+.vscode/
+.history/
+.catkin_tools
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json

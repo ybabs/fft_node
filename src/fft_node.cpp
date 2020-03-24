@@ -1,17 +1,118 @@
 #include "fft_process/fft_node.h"
 #include <fstream>
+#include <termios.h>
 
- ros::Time curr;
- ros::Time prev;
+
+
+int getch()
+{
+    static struct termios oldt, newt;
+	tcgetattr(STDIN_FILENO, &oldt); // Save old settings
+	newt = oldt;
+	newt.c_lflag &= ~(ICANON); // disable buffering
+	tcsetattr(STDIN_FILENO, TCSANOW, &newt);// apply new settings
+	int c = getchar();  // read character // non- blocking
+	
+	tcsetattr(STDIN_FILENO, TCSANOW, &oldt);// restore old settings
+	
+	return c;
+
+}
+
+void STM32Process::sendCommand()
+{
+ ros::Rate loop_rate(50);
+	 
+	while(ros::ok())
+    {   	 
+		int c = getch();
+        //std::unique_lock<std::mutex> locker(mu);
+       
+        ROS_INFO("This thread is running");
+        if(c == 'a')
+        {  
+            writeStartData();
+            std::lock_guard<std::mutex> guard(mu);
+            fftComputeFlag = true;
+            flag_cond.notify_one();          
+        }
+
+        if(c == 'b')
+        {
+            ROS_INFO("b Pressed)");
+            writeStopData();
+            //locker.lock();
+        }
+        
+        
+
+        ros::spinOnce();  
+        loop_rate.sleep();  
+    }
+
+
+	  
+}
+
+bool STM32Process::isFFTReady()
+{
+    return fftComputeFlag;
+}
+
+void STM32Process::setupPort()
+ {
+	 try
+    {
+        ser.setPort("/dev/ttyUSB1");
+        ser.setBaudrate(921600);
+        serial::Timeout time_out = serial::Timeout(100,100,0,100,0);
+        ser.setTimeout(time_out);
+        ser.open();
+    }
+    catch(serial::IOException& e)
+    {
+        ROS_ERROR("Unable to open port: %s", e.what());
+    }
+
+    if(ser.isOpen())
+    {
+        ROS_INFO_STREAM("Serial Port initialised");
+    }
+    else
+    {
+        ROS_ERROR("An error occured");
+    }
+ }
+
 
 STM32Process::STM32Process()
 {
     fft_points_pub = nh.advertise<serial_processing::fft>("FFT", FFT_SIZE);
     image_transport::ImageTransport transport(nh);
     image_pub = transport.advertise("/fft_plot", 1);
+    setupPort();
 
-    processSerialData();
+    
+    //sendCommand();
 
+}
+
+void STM32Process::writeStartData()
+{
+	ROS_INFO("Recording started");
+	start_data[0] = 0x31;
+	ser.write(start_data, 1);
+	
+	//processSerialData();
+}
+
+void STM32Process::writeStopData()
+{
+	ROS_INFO("Recording stopped");
+	stop_data[0]= 0x32;
+	
+	ser.write(stop_data, 1);
+	
 }
 
 template <typename T>
@@ -48,41 +149,18 @@ cv::Mat STM32Process::plotFFTPoints(std::vector<T>& vals, int y_range[2])
 void STM32Process::processSerialData()
 {
 
+    
     float result;
-    int j = 0;
-    try
-    {
-        ser.setPort("/dev/ttyUSB0");
-        ser.setBaudrate(115200);
-        serial::Timeout time_out = serial::Timeout(100,100,0,100,0);
-        ser.setTimeout(time_out);
-        ser.open();
-    }
-    catch(serial::IOException& e)
-    {
-        ROS_ERROR("Unable to open port");
-    }
-
-    if(ser.isOpen())
-    {
-        ROS_INFO_STREAM("Serial Port initialised");
-    }
-    else
-    {
-        ROS_ERROR("An error occured");
-    }
-
-     ros::Rate loop_rate(20);
-
-    while(ros::ok())
-    {
-         //ros::spinOnce();
-
+    int j = 0; 
+     
+   std::unique_lock<std::mutex> locker(mu);
+   flag_cond.wait(locker, std::bind(&STM32Process::isFFTReady, this)); 
+   ROS_INFO("FFT thread is running");
+   while(fftComputeFlag == true)
+   {
          if(ser.available())
          {
-              size_t data_available = ser.available();
-            // int data_available = ser.available();
-            // ROS_INFO("data %d", data_available );
+             size_t data_available = ser.available();
 
              if(data_available > 2052)
              {
@@ -90,24 +168,22 @@ void STM32Process::processSerialData()
                 ser.flushInput();
              }
 
-             std::string delimiter_string;
-            // ser.readline(delimiter_string, 2060, "stop");
-            curr = ros::Time::now();
+            std::string delimiter_string;
+            currTime = ros::Time::now();
             ser.readline(delimiter_string, 2052, "stop");
-            ros::Duration time = curr - prev;
-             prev = curr;
+            ros::Duration time = currTime - prevTime;
+            prevTime = currTime;
 
              // check what the string ends with
              if(boost::algorithm::ends_with(delimiter_string, "stop"))
              {
                  unsigned int num = 0;
 
-                 if(delimiter_string.length() == 2052) //2060
+                 if(delimiter_string.length() == 2052) 
                  {
                       
                      std::vector<unsigned char>uart_bytes(delimiter_string.begin(), delimiter_string.end());
 
-                     //float uart_float_values[515];
                      float uart_float_values[513];
 
                      memcpy(&uart_float_values[0], &uart_bytes[0], uart_bytes.size());
@@ -116,11 +192,7 @@ void STM32Process::processSerialData()
 
                     // remove last element from the vector (STOP)
                     float_vector.erase(float_vector.end()-1);
-                    //sequence_number =  float_vector[0];
-                   // process_time = float_vector[1];
 
-                    //remove first two elements from the vector 
-                   // float_vector.erase(float_vector.begin(), float_vector.begin()+1);
 
                     msg.header.stamp = ros::Time::now();
 
@@ -128,28 +200,15 @@ void STM32Process::processSerialData()
                     {
                         msg.fftAmplitude.data.push_back(*i);
                     }
-
-                    
+             
 
                      double dt = time.toSec();
-                    // std::ofstream myfile("file.csv");
-                    // for(const auto &e: msg.fftAmplitude.data)
-                    // {
-                    //     myfile << e << "\n";
-
-                    // }
-
-
-                     // ADD GPS Timestamped Messages here.....
 
                      // Show graph here..
                      ROS_INFO("Dt %f", dt);
                    int range[2] = {0, (int)float_vector.size()};
-                   graph = plotFFTPoints(float_vector, range);  // change plot_graph to a void()
-                   //cv::imshow( "image", graph );
-
-
-                    // publish FFT Messages
+                   imagePlot = plotFFTPoints(float_vector, range);  // change plot_graph to a void()
+                    // publish FFT Messages     
                     fft_points_pub.publish(msg);
                     // Find index where max value is stored
                     int max_index = max_element(msg.fftAmplitude.data.begin(), msg.fftAmplitude.data.end())- msg.fftAmplitude.data.begin();
@@ -169,15 +228,15 @@ void STM32Process::processSerialData()
              {
                  ROS_WARN("Junk ByteStream");
                  ser.flushInput();
-                // ROS_INFO("Size: %d", data_available);
-             }             
-         }
+        
+             } 
+             
+         }  
+   }
+      
 
-         ros::spinOnce();
 
-         loop_rate.sleep();
-     }
-
+     
 }
 
 
@@ -187,6 +246,14 @@ int main(int argc, char** argv)
 
     STM32Process process;
 
+    std::thread keyboardThread(&STM32Process::sendCommand, &process);
+
+    std::thread fftThread(&STM32Process::processSerialData, &process);
+
+    keyboardThread.join();
+    fftThread.join();
+    
+  
     ros::spin();
 
     return 0;
