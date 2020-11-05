@@ -54,11 +54,12 @@ void STM32Process::setupPort()
 STM32Process::STM32Process()
 {
     fft_points_pub = nh.advertise<serial_processing::fft>("FFT", FFT_SIZE);
+    record_subscriber = nh.subscribe("/uav_agent/record", 1, &STM32Process::serialCallback, this);
     image_transport::ImageTransport transport(nh);
     image_pub = transport.advertise("/fft_plot", 1);
     setupPort();
 
-    }
+}
 
 void STM32Process::writeStartData()
 {
@@ -211,10 +212,7 @@ void STM32Process::processSerialData()
              
          }  
    }
-      
-
-
-     
+           
 }
 
 
@@ -223,9 +221,13 @@ int main(int argc, char** argv)
     ros::init(argc, argv, "fft_proc");
 
     STM32Process process;  
-  
-    ros::spin();
+    ros::Rate rate(50);
 
+    while(ros::ok())
+    {
+        process.processSerialData();
+        rate.sleep();
+    }
     return 0;
     
    

@@ -54,6 +54,7 @@ class STM32Process
         serial::Serial ser;
         image_transport::Publisher image_pub;
         ros::Publisher fft_points_pub;
+        ros::Subscriber record_subscriber;
         ros::NodeHandle nh;
         cv::Mat imagePlot;
         ros::Time currTime;
