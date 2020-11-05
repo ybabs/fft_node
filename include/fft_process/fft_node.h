@@ -43,8 +43,8 @@ class STM32Process
         void writeStartData();
         void writeStopData();
         void setupPort();
-        void sendCommand();
         bool isFFTReady();
+        void serialCallback(const std_msgs::UInt8::ConstPtr& msg);
 
 
     private:

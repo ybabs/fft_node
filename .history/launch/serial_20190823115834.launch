@@ -1,7 +1,0 @@
-<?xml version="1.0"?>
-<launch>
-
-<node name = "serial_node" pkg ="serial_processing" type = "serial_process" output = "screen"
-              launch-prefix="xterm -e gdb --args" />
-
-</launch>

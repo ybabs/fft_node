@@ -19,40 +19,6 @@ int getch()
 
 }
 
-void STM32Process::sendCommand()
-{
- ros::Rate loop_rate(50);
-	 
-	while(ros::ok())
-    {   	 
-		int c = getch();
-        //std::unique_lock<std::mutex> locker(mu);
-       
-        ROS_INFO("This thread is running");
-        if(c == 'a')
-        {  
-            writeStartData();
-            std::lock_guard<std::mutex> guard(mu);
-            fftComputeFlag = true;
-            flag_cond.notify_one();          
-        }
-
-        if(c == 'b')
-        {
-            ROS_INFO("b Pressed)");
-            writeStopData();
-            //locker.lock();
-        }
-        
-        
-
-        ros::spinOnce();  
-        loop_rate.sleep();  
-    }
-
-
-	  
-}
 
 bool STM32Process::isFFTReady()
 {
@@ -63,8 +29,8 @@ void STM32Process::setupPort()
  {
 	 try
     {
-        ser.setPort("/dev/ttyUSB1");
-        ser.setBaudrate(921600);
+        ser.setPort("/dev/ttyAMA1");
+        ser.setBaudrate(230400);
         serial::Timeout time_out = serial::Timeout(100,100,0,100,0);
         ser.setTimeout(time_out);
         ser.open();
@@ -92,10 +58,7 @@ STM32Process::STM32Process()
     image_pub = transport.advertise("/fft_plot", 1);
     setupPort();
 
-    
-    //sendCommand();
-
-}
+    }
 
 void STM32Process::writeStartData()
 {
@@ -113,6 +76,22 @@ void STM32Process::writeStopData()
 	
 	ser.write(stop_data, 1);
 	
+}
+
+void STM32Process::serialCallback(const std_msgs::UInt8::ConstPtr& msg)
+{
+    int rec_cmd = msg->data;
+
+    if(rec_cmd == 0)
+    {
+        writeStartData();
+    } 
+
+    else
+    {
+        writeStopData();
+    }
+    
 }
 
 template <typename T>
@@ -148,7 +127,6 @@ cv::Mat STM32Process::plotFFTPoints(std::vector<T>& vals, int y_range[2])
 
 void STM32Process::processSerialData()
 {
-
     
     float result;
     int j = 0; 
@@ -244,15 +222,7 @@ int main(int argc, char** argv)
 {
     ros::init(argc, argv, "fft_proc");
 
-    STM32Process process;
-
-    std::thread keyboardThread(&STM32Process::sendCommand, &process);
-
-    std::thread fftThread(&STM32Process::processSerialData, &process);
-
-    keyboardThread.join();
-    fftThread.join();
-    
+    STM32Process process;  
   
     ros::spin();
 
