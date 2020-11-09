@@ -42,7 +42,7 @@ void STM32Process::setupPort()
 
     if(ser.isOpen())
     {
-        ROS_INFO_STREAM("Serial Port initialised");
+        ROS_INFO_STREAM("Serial Port yay");
     }
     else
     {
@@ -54,10 +54,14 @@ void STM32Process::setupPort()
 STM32Process::STM32Process()
 {
     fft_points_pub = nh.advertise<serial_processing::fft>("FFT", FFT_SIZE);
-    record_subscriber = nh.subscribe("/uav_agent/record", 1, &STM32Process::serialCallback, this);
+    record_subscriber = nh.subscribe("/uav_agent/record", 10, &STM32Process::serialCallback, this);
     image_transport::ImageTransport transport(nh);
     image_pub = transport.advertise("/fft_plot", 1);
     setupPort();
+
+    //writeStartData();
+
+
 
 }
 
@@ -82,15 +86,20 @@ void STM32Process::writeStopData()
 void STM32Process::serialCallback(const std_msgs::UInt8::ConstPtr& msg)
 {
     int rec_cmd = msg->data;
+    ROS_INFO("Callback");
 
     if(rec_cmd == 0)
     {
-        writeStartData();
+        //writeStartData();
+        start_data[0] = 0x31;
+        ser.write(start_data, 1);
     } 
 
     else
     {
-        writeStopData();
+       // writeStopData();
+        	stop_data[0]= 0x32;
+		    ser.write(stop_data, 1);
     }
     
 }
@@ -221,13 +230,16 @@ int main(int argc, char** argv)
     ros::init(argc, argv, "fft_proc");
 
     STM32Process process;  
-    ros::Rate rate(50);
 
-    while(ros::ok())
-    {
-        process.processSerialData();
-        rate.sleep();
-    }
+    ros::spin();
+    //ros::Rate rate(50);
+
+    // while(ros::ok())
+    // {
+    //     process.processSerialData();
+    //     ros::spinOnce();
+    //     rate.sleep();
+    // }
     return 0;
     
    
