@@ -1,23 +1,7 @@
 #include "fft_process/fft_node.h"
 #include <fstream>
-#include <termios.h>
 
 
-
-int getch()
-{
-    static struct termios oldt, newt;
-	tcgetattr(STDIN_FILENO, &oldt); // Save old settings
-	newt = oldt;
-	newt.c_lflag &= ~(ICANON); // disable buffering
-	tcsetattr(STDIN_FILENO, TCSANOW, &newt);// apply new settings
-	int c = getchar();  // read character // non- blocking
-	
-	tcsetattr(STDIN_FILENO, TCSANOW, &oldt);// restore old settings
-	
-	return c;
-
-}
 
 
 bool STM32Process::isFFTReady()
@@ -59,8 +43,7 @@ STM32Process::STM32Process()
     image_pub = transport.advertise("/fft_plot", 1);
     setupPort();
 
-    //writeStartData();
-
+    this->timer = nh.createTimer(ros::Duration(1.0/30.0), &STM32Process::processDataCallback, this); 
 
 
 }
@@ -70,9 +53,7 @@ void STM32Process::writeStartData()
 	ROS_INFO("Recording started");
 	start_data[0] = 0x31;
 	ser.write(start_data, 1);
-	
-	//processSerialData();
-}
+}	
 
 void STM32Process::writeStopData()
 {
@@ -88,20 +69,18 @@ void STM32Process::serialCallback(const std_msgs::UInt8::ConstPtr& msg)
     int rec_cmd = msg->data;
     ROS_INFO("Callback");
 
-    if(rec_cmd == 0)
+    switch(rec_cmd)
     {
-        //writeStartData();
-        start_data[0] = 0x31;
-        ser.write(start_data, 1);
-    } 
-
-    else
-    {
-       // writeStopData();
-        	stop_data[0]= 0x32;
-		    ser.write(stop_data, 1);
+        case 1:
+            writeStartData();
+            break;
+        case 2: 
+            writeStopData();
+            break;
+        default:
+            break;
     }
-    
+
 }
 
 template <typename T>
@@ -135,17 +114,12 @@ cv::Mat STM32Process::plotFFTPoints(std::vector<T>& vals, int y_range[2])
 
 }
 
-void STM32Process::processSerialData()
+void STM32Process::processDataCallback(const ros::TimerEvent&)
 {
-    
+    //ROS_INFO("Callback Serial");
     float result;
     int j = 0; 
      
-   std::unique_lock<std::mutex> locker(mu);
-   flag_cond.wait(locker, std::bind(&STM32Process::isFFTReady, this)); 
-   ROS_INFO("FFT thread is running");
-   while(fftComputeFlag == true)
-   {
          if(ser.available())
          {
              size_t data_available = ser.available();
@@ -193,9 +167,9 @@ void STM32Process::processSerialData()
                      double dt = time.toSec();
 
                      // Show graph here..
-                     ROS_INFO("Dt %f", dt);
-                   int range[2] = {0, (int)float_vector.size()};
-                   imagePlot = plotFFTPoints(float_vector, range);  // change plot_graph to a void()
+                    // ROS_INFO("Dt %f", dt);
+                   //int range[2] = {0, (int)float_vector.size()};
+                   //imagePlot = plotFFTPoints(float_vector, range);  // change plot_graph to a void()
                     // publish FFT Messages     
                     fft_points_pub.publish(msg);
                     // Find index where max value is stored
@@ -220,7 +194,6 @@ void STM32Process::processSerialData()
              } 
              
          }  
-   }
            
 }
 
@@ -229,17 +202,21 @@ int main(int argc, char** argv)
 {
     ros::init(argc, argv, "fft_proc");
 
-    STM32Process process;  
 
+    STM32Process process;
+
+    //  ros::Rate loop_rate(50);
+
+    //  while (ros::ok())
+    //  {
+    //      ros::spinOnce();
+
+    //      loop_rate.sleep();
+    //  }
+
+    
     ros::spin();
-    //ros::Rate rate(50);
-
-    // while(ros::ok())
-    // {
-    //     process.processSerialData();
-    //     ros::spinOnce();
-    //     rate.sleep();
-    // }
+   
     return 0;
     
    
