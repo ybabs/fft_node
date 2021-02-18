@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(serial_processing)
+project(porpdaq)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
  add_compile_options(-std=c++11)
@@ -46,11 +46,11 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-add_executable(serial_processing_node src/fft_node.cpp)
+add_executable(porpdaq_node src/fft_node.cpp)
 
-add_dependencies(serial_processing_node serial_processing_generate_messages_cpp)
+add_dependencies(porpdaq_node serial_processing_generate_messages_cpp)
 
-target_link_libraries(serial_processing_node
+target_link_libraries(porpdaq_node
   ${catkin_LIBRARIES}
    ${OpenCV_LIBRARIES}
 )
