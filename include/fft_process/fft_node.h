@@ -9,7 +9,7 @@
 #include <std_msgs/UInt8.h>
 #include <std_msgs/Float32.h>
 #include <std_msgs/Float32MultiArray.h>
-#include "serial_processing/fft.h"
+#include "porpdaq/fft.h"
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/foreach.hpp>
 #include "cv_bridge/cv_bridge.h"
@@ -47,7 +47,7 @@ class STM32Process
     private:
         std::vector<unsigned char> data_vector;
         std_msgs::Float32MultiArray converted_values;
-        serial_processing::fft msg;
+        porpdaq::fft msg;
         serial::Serial ser;
         image_transport::Publisher image_pub;
         ros::Publisher fft_points_pub;

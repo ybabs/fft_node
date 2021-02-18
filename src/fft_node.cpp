@@ -37,7 +37,7 @@ void STM32Process::setupPort()
 
 STM32Process::STM32Process()
 {
-    fft_points_pub = nh.advertise<serial_processing::fft>("FFT", FFT_SIZE);
+    fft_points_pub = nh.advertise<porpdaq::fft>("FFT", FFT_SIZE);
     record_subscriber = nh.subscribe("/uav_agent/record", 10, &STM32Process::serialCallback, this);
     image_transport::ImageTransport transport(nh);
     image_pub = transport.advertise("/fft_plot", 1);
