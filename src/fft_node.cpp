@@ -14,7 +14,14 @@ void STM32Process::setupPort()
 	 try
     {
         ser.setPort("/dev/ttyAMA1");
-        ser.setBaudrate(230400);
+        if(dev_id == F7_DEVICE)
+        {
+          ser.setBaudrate(F7_BAUD);
+        }
+        else if(dev_id == H7_DEVICE)
+        {
+            ser.setBaudrate(H7_BAUD);
+        }
         serial::Timeout time_out = serial::Timeout(100,100,0,100,0);
         ser.setTimeout(time_out);
         ser.open();
@@ -23,10 +30,9 @@ void STM32Process::setupPort()
     {
         ROS_ERROR("Unable to open port: %s", e.what());
     }
-
     if(ser.isOpen())
     {
-        ROS_INFO_STREAM("Serial Port yay");
+        ROS_INFO_STREAM("Serial Port initialised");
     }
     else
     {
@@ -176,8 +182,18 @@ void STM32Process::processDataCallback(const ros::TimerEvent&)
                     int max_index = max_element(msg.fftAmplitude.data.begin(), msg.fftAmplitude.data.end())- msg.fftAmplitude.data.begin();
                     // computes the value of the highest amplitude
                     float max = *max_element(msg.fftAmplitude.data.begin(), msg.fftAmplitude.data.end());
+                    float frequency = 0;
                     // return frequency
-                    float frequency = (max_index * FFT_RESOLUTION)/1000;
+                    if(dev_id == F7_DEVICE)
+                    {
+                        frequency = (max_index * F7_FFT_RESOLUTION)/1000;
+                    }
+
+                    else if(dev_id == H7_DEVICE)
+                    {
+                        frequency = (max_index * H7_FFT_RESOLUTION)/1000;
+                    }                    
+                   
                     // ROS_INFO("Packet Number: %d, Process time %d us, %f kHz Frequency at Index %d with amplitude %f", frequency , max_index, max);
                     ROS_INFO("%f kHz Frequency at Index %d with amplitude %f", frequency , max_index, max);
 
@@ -204,16 +220,6 @@ int main(int argc, char** argv)
 
 
     STM32Process process;
-
-    //  ros::Rate loop_rate(50);
-
-    //  while (ros::ok())
-    //  {
-    //      ros::spinOnce();
-
-    //      loop_rate.sleep();
-    //  }
-
     
     ros::spin();
    

@@ -23,8 +23,16 @@
 #define SERIAL_LENGTH 2052
 #define FLOAT_SIZE 1024
 #define FFT_SIZE 512
+
+#define F7_DEVICE 0x01
+#define H7_DEVICE 0x02
+
+#define H7_BAUD 921600
+#define F7_BAUD 230400
+
  
-const float FFT_RESOLUTION = 400000/1024; // Sampling frequency / fft length  
+const float F7_FFT_RESOLUTION = 400000/1024; // Sampling frequency / fft length  
+const float H7_FFT_RESOLUTION = 500000/1024; // Sampling frequency / fft length  
 
 
 class STM32Process
@@ -60,6 +68,7 @@ class STM32Process
         uint8_t stop_data[1];
         ros::Timer timer;
         bool fftComputeFlag;
+        static const int dev_id = F7_DEVICE; // change this to a ros param later
 
 };
 
