@@ -48,7 +48,7 @@ include_directories(
 
 add_executable(porpdaq_node src/fft_node.cpp)
 
-add_dependencies(porpdaq_node serial_processing_generate_messages_cpp)
+add_dependencies(porpdaq_node porpdaq_generate_messages_cpp)
 
 target_link_libraries(porpdaq_node
   ${catkin_LIBRARIES}
