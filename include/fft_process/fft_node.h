@@ -68,7 +68,8 @@ class STM32Process
         uint8_t stop_data[1];
         ros::Timer timer;
         bool fftComputeFlag;
-        static const int dev_id = F7_DEVICE; // change this to a ros param later
+        int dev_id;
+        std::string port;
 
 };
 

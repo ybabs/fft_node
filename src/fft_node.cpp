@@ -3,7 +3,6 @@
 
 
 
-
 bool STM32Process::isFFTReady()
 {
     return fftComputeFlag;
@@ -47,11 +46,20 @@ STM32Process::STM32Process()
     record_subscriber = nh.subscribe("/uav_agent/record", 10, &STM32Process::serialCallback, this);
     image_transport::ImageTransport transport(nh);
     image_pub = transport.advertise("/fft_plot", 1);
+
+    if(ros::param::has("/dev_id"))
+    {
+        ros::param::get("/dev_id", dev_id);
+    }
+    
+    if(ros::param::has("/dev_id"))
+    {   
+        ros::param::get("/port", port);
+    }
+
+    ROS_INFO("Device is a %d type on %s", dev_id, port);
     setupPort();
-
     this->timer = nh.createTimer(ros::Duration(1.0/30.0), &STM32Process::processDataCallback, this); 
-
-
 }
 
 void STM32Process::writeStartData()

@@ -1,7 +1,19 @@
 <?xml version="1.0"?>
 <launch>
+<!-- <rosparam command="load" file="$(find fft_node)/config/f7params.yaml"  /> -->
+<param name="port" type="str" value="/dev/ttyAMA1"/>
+<param name="dev_id" type="int"value = "0x01" />
+<node name = "porpdaq_f7_node" pkg ="porpdaq" type = "porpdaq_node" output = "screen"
+              launch-prefix="xterm -e gdb --args" />
 
-<node name = "serial_node" pkg ="serial_processing" type = "serial_process" output = "screen"
+</launch>
+
+
+<launch>
+<!-- <rosparam command="load" file="$(find fft_node)/config/h7params.yaml"  /> -->
+<param name="port" type="str" value="/dev/ttyAMA0"/>
+<param name="dev_id" type="int"value = "0x02" />
+<node name = "porpdaq_h7_node" pkg ="porpdaq" type = "porpdaq_node" output = "screen"
               launch-prefix="xterm -e gdb --args" />
 
 </launch>
